@@ -82,7 +82,7 @@
       color: #666;
     }
 
-    /* ПОЛНОЭКРАННЫЙ СКРИМЕР ДЛЯ МОБИЛЬНЫХ */
+    /* ПОЛНОЭКРАННЫЙ СКРИМЕР */
     #screamer-screen {
       display: none;
       position: fixed;
@@ -92,7 +92,7 @@
       bottom: 0;
       width: 100vw;
       height: 100vh;
-      height: 100dvh; /* Гарантия 100% высоты на мобильных */
+      height: 100dvh;
       background-color: #000;
       z-index: 999999;
       justify-content: center;
@@ -102,10 +102,10 @@
     #screamer-screen img {
       width: 100%;
       height: 100%;
-      object-fit: cover; /* Растягивает без рамок */
+      object-fit: fill; /* Растягивает во весь экран без обрезки */
     }
 
-    /* ЭКРАН ПОЗДРАВЛЕНИЯ */
+    /* ЭКРАН ПОЗДРАВЛЕНИЯ С ЛЁГКОЙ РАМКОЙ */
     #greeting-screen {
       display: none;
       max-width: 500px;
@@ -113,7 +113,8 @@
       background: rgba(255, 255, 255, 0.95);
       padding: 25px;
       border-radius: 20px;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+      border: 1.5px solid rgba(0, 0, 0, 0.08); /* Легкая аккуратная рамка */
+      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
     }
 
     .photo {
@@ -180,10 +181,11 @@
     <p class="hint">Управление пальчиком (чистым) ✨</p>
   </div>
 
-  <!-- 2. ЭКРАН СКРИМЕРА (На весь мобильный экран) -->
+  <!-- 2. ЭКРАН СКРИМЕРА -->
   <div id="screamer-screen">
-    <img src="screamer.png" alt="Screamer">
-    <!-- Звук скримера (Сюда вставим ссылку, когда скинешь) -->
+    <!-- Картинка загрузится автоматически (jpg или png) -->
+    <img id="screamerImg" src="screamer.jpg" onerror="this.onerror=null; this.src='screamer.png';" alt="Screamer">
+    <!-- Звук скримера (Сюда подставишь прямую ссылку) -->
     <audio id="screamerSound" src="screamer.mp3" preload="auto"></audio>
   </div>
 
@@ -412,7 +414,7 @@
       e.preventDefault();
     }, { passive: false });
 
-    // РЕЗКИЙ СКРИМЕР И МГНОВЕННЫЙ ПЕРЕХОД
+    // СКРИМЕР И ПЕРЕХОД
     function checkWin() {
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
@@ -420,22 +422,18 @@
         const screamerScreen = document.getElementById('screamer-screen');
         const screamerSound = document.getElementById('screamerSound');
 
-        // Мгновенно врубаем скример во весь экран
         screamerScreen.style.display = 'flex';
         screamerSound.currentTime = 0; 
         screamerSound.play().catch(e => console.log(e));
 
-        // Ровно 1 секунда (1000 мс)
+        // Ровно 1 секунда
         setTimeout(() => {
-          // Выключаем скример
           screamerSound.pause();
           screamerScreen.style.display = 'none';
 
-          // Показываем открытку
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
 
-          // Включаем праздничную музыку
           playMusic();
         }, 1000); 
       }
