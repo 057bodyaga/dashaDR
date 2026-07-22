@@ -112,7 +112,7 @@
       display: none;
       max-width: 500px;
       width: 90%;
-      background: #ffffff; /* Без прозрачности */
+      background: #ffffff;
       padding: 25px;
       border-radius: 20px;
       border: 1.5px solid rgba(0, 0, 0, 0.08);
@@ -131,23 +131,21 @@
       object-fit: cover;
     }
 
-    /* БЛОК С ТЕКСТОМ И БЫСТРОЙ RGB ВСТАВКОЙ */
     .message {
       font-size: 1.05rem;
       line-height: 1.6;
       color: #2d3436;
       white-space: pre-line;
       margin: 15px 0;
-      padding: 18px 16px 18px 20px; /* Выровненные отступы сверху и снизу */
+      padding: 18px 16px 18px 20px;
       background: rgba(108, 92, 231, 0.06);
-      border-left: 6px solid #ff0000; /* Исходный цвет для перелива */
+      border-left: 6px solid #ff0000;
       border-radius: 12px;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
       text-align: left;
-      animation: rgbBorder 1.2s linear infinite; /* Быстрая быстрая смена RGB */
+      animation: rgbBorder 1.2s linear infinite;
     }
 
-    /* АНИМАЦИЯ RGB ДЛЯ ПОЛОСКИ */
     @keyframes rgbBorder {
       0%   { border-left-color: #ff0000; }
       17%  { border-left-color: #ff7f00; }
@@ -186,23 +184,23 @@
       display: none;
     }
 
-    /* СТИЛИ БЕСКОНЕЧНЫХ ВЫЛЕТАЮЩИХ ЦВЕТОВ */
+    /* СТИЛИ ОГРОМНОГО ПОТОКА ЦВЕТОЧКОВ */
     .flower {
       position: fixed;
       pointer-events: none;
-      z-index: 1; /* Под основным блоком, но вылетают из-за его краев */
+      z-index: 1;
       user-select: none;
-      animation: flyAndFade 3s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+      animation: flyAndFade 2.5s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
     }
 
     @keyframes flyAndFade {
       0% {
         opacity: 1;
-        transform: translate(0, 0) scale(0.6) rotate(0deg);
+        transform: translate(0, 0) scale(0.5) rotate(0deg);
       }
       100% {
         opacity: 0;
-        transform: translate(var(--tx), var(--ty)) scale(1.3) rotate(var(--rot));
+        transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(var(--rot));
       }
     }
   </style>
@@ -236,7 +234,6 @@
     
     <img src="photo.png" alt="Поздравление" class="photo">
     
-    <!-- Выделенный блок поздравления -->
     <div class="message">Желаю тебе всегда оставаться такой же красивой, счастливой и немного припизднутой.
 Пусть деньги сами липнут к тебе, мечты исполняются без очереди, а проблемы боятся даже подходить. Люблю тебя! 💞💋</div>
 
@@ -260,7 +257,6 @@
     finishImg.src = 'finish.png';
     finishImg.onload = () => { isFinishImgLoaded = true; };
 
-    // Установлен размер лабиринта 10x15
     let cols = 10;
     let rows = 15;
     let cellSize = canvas.width / cols;
@@ -331,8 +327,9 @@
       const targetX = gridPos.x * cellSize + cellSize / 2;
       const targetY = gridPos.y * cellSize + cellSize / 2;
 
-      renderPos.x += (targetX - renderPos.x) * 0.25;
-      renderPos.y += (targetY - renderPos.y) * 0.25;
+      // Мягкая интерполяция без тряски
+      renderPos.x += (targetX - renderPos.x) * 0.35;
+      renderPos.y += (targetY - renderPos.y) * 0.35;
 
       draw();
 
@@ -344,15 +341,25 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Рисуем тонкие изящные стенки
       ctx.fillStyle = '#6c5ce7';
+      const wallThickness = cellSize * 0.25; 
+      const wallOffset = (cellSize - wallThickness) / 2;
+
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (grid[r][c] === 1) {
-            ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+            ctx.fillRect(
+              c * cellSize + wallOffset, 
+              r * cellSize + wallOffset, 
+              wallThickness, 
+              wallThickness
+            );
           }
         }
       }
 
+      // ФИНИШ
       const goalX = goal.x * cellSize + cellSize / 2;
       const goalY = goal.y * cellSize + cellSize / 2;
       const finishSize = cellSize * 1.1;
@@ -366,13 +373,20 @@
           finishSize
         );
       } else {
+        // Стандартная иконка финиша
         ctx.fillStyle = '#ff7675';
         ctx.beginPath();
-        ctx.arc(goalX, goalY, cellSize / 2.5, 0, Math.PI * 2);
+        ctx.arc(goalX, goalY, cellSize * 0.45, 0, Math.PI * 2);
         ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold ' + (cellSize * 0.5) + 'px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🏁', goalX, goalY);
       }
 
-      const playerSize = cellSize * 1.05;
+      // ИГРОК (крупнее стенок)
+      const playerSize = cellSize * 1.25;
       if (isPlayerImgLoaded) {
         ctx.drawImage(
           playerImg,
@@ -384,7 +398,7 @@
       } else {
         ctx.fillStyle = '#00b894';
         ctx.beginPath();
-        ctx.arc(renderPos.x, renderPos.y, cellSize * 0.4, 0, Math.PI * 2);
+        ctx.arc(renderPos.x, renderPos.y, cellSize * 0.45, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -405,10 +419,11 @@
       const dx = touchX - currentPX;
       const dy = touchY - currentPY;
 
+      // Увеличенный порог отклика предотвращает случайную микро-тряску
+      const threshold = cellSize * 0.35; 
+
       let nextX = gridPos.x;
       let nextY = gridPos.y;
-
-      const threshold = cellSize * 0.2;
 
       if (Math.abs(dx) > Math.abs(dy)) {
         if (dx > threshold) nextX++;
@@ -448,7 +463,7 @@
       e.preventDefault();
     }, { passive: false });
 
-    // СКРИМЕР, ПЕРЕХОД И ЗАПУСК БЕСКОНЕЧНЫХ ЦВЕТОЧКОВ
+    // ПОБЕДА И СКРИМЕР
     function checkWin() {
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
@@ -477,64 +492,71 @@
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
 
-          // Запуск бесконечного генерирования цветочков по бокам
-          startInfiniteFlowers();
+          // Запуск УЛЬТРА-потока цветочков
+          startMassiveFlowers();
 
           playMusic();
         }, 1000); 
       }
     }
 
-    // БЕСКОНЕЧНЫЙ ГЕНЕРАТОР ЦВЕТОЧКОВ ПО БОКАМ
-    function startInfiniteFlowers() {
+    // МАССИВНЫЙ БЕСКОНЕЧНЫЙ ВЫЛЕТ ЦВЕТКОВ
+    function startMassiveFlowers() {
+      // Очень быстрый таймер спавна (25мс)
       setInterval(() => {
+        // За один шаг спавним сразу 2-3 цветка с разных сторон
         spawnSideFlower();
-      }, 120); // Регулярный спавн каждые 120 мс
+        spawnSideFlower();
+      }, 25);
     }
 
     function spawnSideFlower() {
       const greetingScreen = document.getElementById('greeting-screen');
       const rect = greetingScreen.getBoundingClientRect();
-      const flowers = ['🌸', '🌺', '🌻', '🌹', '🌷', '🌼', '✨', '💖'];
+      const flowers = ['🌸', '🌺', '🌻', '🌹', '🌷', '🌼', '✨', '💖', '💐', '🏵️'];
 
       const flower = document.createElement('div');
       flower.className = 'flower';
       flower.innerText = flowers[Math.floor(Math.random() * flowers.length)];
 
-      // Выбор грани (0 = Левый край, 1 = Правый край, 2 = Нижний край)
-      const side = Math.floor(Math.random() * 3);
+      const side = Math.floor(Math.random() * 4); // Со всех 4-х сторон
       let startX, startY;
       let tx, ty;
 
-      if (side === 0) { // Слева от блока
-        startX = rect.left + 10;
+      if (side === 0) { // Слева
+        startX = rect.left + 5;
         startY = rect.top + Math.random() * rect.height;
-        tx = -(Math.random() * 150 + 80) + 'px';
-        ty = -(Math.random() * 180 + 50) + 'px';
-      } else if (side === 1) { // Справа от блока
-        startX = rect.right - 10;
+        tx = -(Math.random() * 250 + 100) + 'px';
+        ty = (Math.random() * 300 - 150) + 'px';
+      } else if (side === 1) { // Справа
+        startX = rect.right - 5;
         startY = rect.top + Math.random() * rect.height;
-        tx = (Math.random() * 150 + 80) + 'px';
-        ty = -(Math.random() * 180 + 50) + 'px';
-      } else { // Снизу блока
+        tx = (Math.random() * 250 + 100) + 'px';
+        ty = (Math.random() * 300 - 150) + 'px';
+      } else if (side === 2) { // Снизу
         startX = rect.left + Math.random() * rect.width;
-        startY = rect.bottom - 10;
-        tx = (Math.random() * 160 - 80) + 'px';
-        ty = (Math.random() * 150 + 80) + 'px';
+        startY = rect.bottom - 5;
+        tx = (Math.random() * 300 - 150) + 'px';
+        ty = (Math.random() * 200 + 100) + 'px';
+      } else { // Сверху
+        startX = rect.left + Math.random() * rect.width;
+        startY = rect.top + 5;
+        tx = (Math.random() * 300 - 150) + 'px';
+        ty = -(Math.random() * 200 + 100) + 'px';
       }
 
       flower.style.left = startX + 'px';
       flower.style.top = startY + 'px';
-      flower.style.fontSize = (Math.random() * 18 + 22) + 'px';
+      flower.style.fontSize = (Math.random() * 22 + 20) + 'px';
 
-      const rot = (Math.random() * 360 - 180) + 'deg';
+      const rot = (Math.random() * 720 - 360) + 'deg';
       flower.style.setProperty('--tx', tx);
       flower.style.setProperty('--ty', ty);
       flower.style.setProperty('--rot', rot);
 
       document.body.appendChild(flower);
 
-      setTimeout(() => flower.remove(), 3000);
+      setTimeout(() => flower.remove(), 2500);
     }
 
     function playMusic() {
