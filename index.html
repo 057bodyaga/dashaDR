@@ -135,12 +135,6 @@
       display: none;
     }
 
-    audio {
-      width: 100%;
-      margin-top: 15px;
-      border-radius: 30px;
-    }
-
     .message {
       font-size: 1.05rem;
       line-height: 1.5;
@@ -178,12 +172,12 @@
       Спасибо, что ты есть ❤️
     </div>
 
-    <!-- Кнопка включения музыки -->
-    <button class="music-btn" id="playBtn" onclick="toggleAudio()">▶ Включить музыку 🎵</button>
+    <!-- Кнопка управления музыкой -->
+    <button class="music-btn" id="playBtn" onclick="toggleAudio()">⏸ Пауза 🎵</button>
     <div id="audio-status">Ошибка воспроизведения файла!</div>
 
-    <!-- Прямая ссылка на трек -->
-    <audio id="bgSong" src="https://litter.catbox.moe/t4iettpvd5jmj4aj.mp3" controls preload="auto"></audio>
+    <!-- Скрытый плеер (display: none) -->
+    <audio id="bgSong" src="https://litter.catbox.moe/t4iettpvd5jmj4aj.mp3" style="display: none;" preload="auto"></audio>
   </div>
 
   <script>
@@ -376,6 +370,9 @@
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
 
+        // Принудительный запуск музыки при победе
+        playMusic();
+
         setTimeout(() => {
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
@@ -383,19 +380,26 @@
       }
     }
 
-    function toggleAudio() {
+    function playMusic() {
       const audio = document.getElementById('bgSong');
       const btn = document.getElementById('playBtn');
       const status = document.getElementById('audio-status');
 
+      audio.play().then(() => {
+        btn.innerHTML = '⏸ Пауза 🎵';
+        status.style.display = 'none';
+      }).catch(err => {
+        console.error("Автозапуск блокирован:", err);
+        btn.innerHTML = '▶ Включить музыку 🎵';
+      });
+    }
+
+    function toggleAudio() {
+      const audio = document.getElementById('bgSong');
+      const btn = document.getElementById('playBtn');
+
       if (audio.paused) {
-        audio.play().then(() => {
-          btn.innerHTML = '⏸ Пауза';
-          status.style.display = 'none';
-        }).catch(err => {
-          console.error("Ошибка аудио:", err);
-          status.style.display = 'block';
-        });
+        playMusic();
       } else {
         audio.pause();
         btn.innerHTML = '▶ Включить музыку 🎵';
