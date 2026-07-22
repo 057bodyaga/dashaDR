@@ -24,18 +24,41 @@
       color: #333;
     }
 
-    /* Экран Лабиринта */
     #maze-screen {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       width: 100%;
     }
 
     h1 {
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       color: #4a4a4a;
+    }
+
+    /* Кнопки режима */
+    .mode-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      background: #ffffff;
+      border: 2px solid #6c5ce7;
+      color: #6c5ce7;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    .btn.active {
+      background: #6c5ce7;
+      color: #ffffff;
     }
 
     #maze-container {
@@ -44,14 +67,14 @@
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.15);
       padding: 8px;
-      touch-action: none; /* Отключаем скролл экрана при игре */
+      touch-action: none;
     }
 
     canvas {
       display: block;
       border-radius: 8px;
       max-width: 92vw;
-      max-height: 75vh; /* Оптимизировано под вертикальные экраны */
+      max-height: 70vh;
     }
 
     .hint {
@@ -59,7 +82,6 @@
       color: #666;
     }
 
-    /* Экран Поздравления */
     #greeting-screen {
       display: none;
       max-width: 500px;
@@ -106,26 +128,29 @@
   <!-- 1. ИГРОВОЙ ЭКРАН -->
   <div id="maze-screen">
     <h1>Пройди лабиринт, чтобы открыть подарок! 🎁</h1>
+
+    <div class="mode-buttons">
+      <button class="btn active" id="btn-easy" onclick="setMode('easy')">⚡ Легкий (5x1)</button>
+      <button class="btn" id="btn-hard" onclick="setMode('hard')">🧩 Обычный (25x35)</button>
+    </div>
+
     <div id="maze-container">
       <canvas id="mazeCanvas" width="375" height="525"></canvas>
     </div>
-    <p class="hint">Тяни в любую сторону — герой пойдёт за пальцем ✨</p>
+    <p class="hint">Проведи пальцем до красной точки ✨</p>
   </div>
 
   <!-- 2. ЭКРАН ПОЗДРАВЛЕНИЯ -->
   <div id="greeting-screen">
     <h1>🎉 С Днём Рождения! 🎉</h1>
     
-    <!-- Главное фото (photo.png) -->
     <img src="photo.png" alt="Поздравление" class="photo">
     
-    <!-- Текст поздравления -->
     <div class="message">
       Пусть каждый день приносит радость, вдохновение и исполнение всех желаний!
       Спасибо, что ты есть ❤️
     </div>
 
-    <!-- Твоя песня (song.mp3) -->
     <audio id="bgSong" controls preload="auto">
       <source src="song.mp3" type="audio/mpeg">
       Ваш браузер не поддерживает аудио.
@@ -136,31 +161,88 @@
     const canvas = document.getElementById('mazeCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Картинка персонажа (hero.png)
     const playerImg = new Image();
     let isPlayerImgLoaded = false;
     playerImg.src = 'hero.png';
     playerImg.onload = () => { isPlayerImgLoaded = true; };
 
-    // Размеры сетки
-    const cols = 25;
-    const rows = 35;
-    const cellSize = canvas.width / cols;
+    let cols = 1;
+    let rows = 5;
+    let cellSize = canvas.width / cols;
+    let grid = [];
+    let gridPos = { x: 0, y: 0 };
+    let renderPos = { x: 0, y: 0 };
+    let goal = { x: 0, y: 4 };
 
-    // Инициализация сетки (1 = стена, 0 = проход)
-    const grid = Array.from({ length: rows }, () => Array(cols).fill(1));
+    let isDragging = false;
+    let gameWon = false;
 
-    // Идеальная генерация лабиринта
+    // Инициализация звукового контекста для обхода блокировок iOS/Android
+    const audio = document.getElementById('bgSong');
+    let audioCtx = null;
+
+    function unlockAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      // Разблокировка HTML5 Audio
+      audio.play().then(() => {
+        audio.pause();
+      }).catch(() => {});
+    }
+
+    function setMode(mode) {
+      if (mode === 'easy') {
+        cols = 1;
+        rows = 5;
+        document.getElementById('btn-easy').classList.add('active');
+        document.getElementById('btn-hard').classList.remove('active');
+      } else {
+        cols = 25;
+        rows = 35;
+        document.getElementById('btn-hard').classList.add('active');
+        document.getElementById('btn-easy').classList.remove('active');
+      }
+      initGame();
+    }
+
+    function initGame() {
+      cellSize = canvas.width / cols;
+      grid = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+      if (cols > 1) {
+        // Заполнение стенами для сложного режима
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            grid[r][c] = 1;
+          }
+        }
+        generateMaze(1, 1);
+        grid[0][1] = 0;
+        grid[rows - 1][cols - 2] = 0;
+        gridPos = { x: 1, y: 0 };
+        goal = { x: cols - 2, y: rows - 1 };
+      } else {
+        // Легкий режим 5x1 (Прямая дорожка)
+        gridPos = { x: 0, y: 0 };
+        goal = { x: 0, y: 4 };
+      }
+
+      renderPos.x = gridPos.x * cellSize + cellSize / 2;
+      renderPos.y = gridPos.y * cellSize + cellSize / 2;
+      gameWon = false;
+    }
+
     function generateMaze(r, c) {
       grid[r][c] = 0;
-      const dirs = [
-        [-2, 0], [2, 0], [0, -2], [0, 2]
-      ].sort(() => Math.random() - 0.5);
+      const dirs = [[-2, 0], [2, 0], [0, -2], [0, 2]].sort(() => Math.random() - 0.5);
 
       for (let [dr, dc] of dirs) {
         const nr = r + dr;
         const nc = c + dc;
-
         if (nr > 0 && nr < rows - 1 && nc > 0 && nc < cols - 1 && grid[nr][nc] === 1) {
           grid[r + dr / 2][c + dc / 2] = 0;
           generateMaze(nr, nc);
@@ -168,37 +250,10 @@
       }
     }
 
-    generateMaze(1, 1);
-    grid[0][1] = 0;
-    grid[rows - 1][cols - 2] = 0;
-
-    let gridPos = { x: 1, y: 0 };
-    let renderPos = { x: 1 * cellSize + cellSize / 2, y: cellSize / 2 };
-
-    const goal = { x: cols - 2, y: rows - 1 };
-    let isDragging = false;
-    let gameWon = false;
-
-    // Подготовка и разблокировка аудио
-    const audio = document.getElementById('bgSong');
-    let isAudioUnlocked = false;
-
-    function unlockAudio() {
-      if (!isAudioUnlocked) {
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          isAudioUnlocked = true;
-        }).catch(() => {});
-      }
-    }
-
-    // Отрисовка без скольжения (FPS плавность сохранена)
     function animate() {
       const targetX = gridPos.x * cellSize + cellSize / 2;
       const targetY = gridPos.y * cellSize + cellSize / 2;
 
-      // Быстрое доведение до центра клетки
       renderPos.x += (targetX - renderPos.x) * 0.4;
       renderPos.y += (targetY - renderPos.y) * 0.4;
 
@@ -228,12 +283,12 @@
       ctx.arc(
         goal.x * cellSize + cellSize / 2,
         goal.y * cellSize + cellSize / 2,
-        cellSize / 2.5, 0, Math.PI * 2
+        cellSize / 3, 0, Math.PI * 2
       );
       ctx.fill();
 
-      // Персонаж (hero.png или зелёный кружок)
-      const playerSize = cellSize * 1.1;
+      // Персонаж
+      const playerSize = cellSize * 0.8;
       if (isPlayerImgLoaded) {
         ctx.drawImage(
           playerImg,
@@ -245,12 +300,11 @@
       } else {
         ctx.fillStyle = '#00b894';
         ctx.beginPath();
-        ctx.arc(renderPos.x, renderPos.y, cellSize * 0.4, 0, Math.PI * 2);
+        ctx.arc(renderPos.x, renderPos.y, cellSize * 0.35, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    // Движение в сторону пальца/курсора даже если он за пределами пути
     function handleMove(e) {
       if (!isDragging || gameWon) return;
 
@@ -261,26 +315,23 @@
       const touchX = (clientX - rect.left) * (canvas.width / rect.width);
       const touchY = (clientY - rect.top) * (canvas.height / rect.height);
 
-      // Текущие координаты персонажа в пикселях
       const currentPX = gridPos.x * cellSize + cellSize / 2;
       const currentPY = gridPos.y * cellSize + cellSize / 2;
 
       const dx = touchX - currentPX;
       const dy = touchY - currentPY;
 
-      // Проверяем, куда тянут относительно текущей клетки
       let nextX = gridPos.x;
       let nextY = gridPos.y;
 
       if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > cellSize * 0.3) nextX++;
-        else if (dx < -cellSize * 0.3) nextX--;
+        if (dx > cellSize * 0.2) nextX++;
+        else if (dx < -cellSize * 0.2) nextX--;
       } else {
-        if (dy > cellSize * 0.3) nextY++;
-        else if (dy < -cellSize * 0.3) nextY--;
+        if (dy > cellSize * 0.2) nextY++;
+        else if (dy < -cellSize * 0.2) nextY--;
       }
 
-      // Если в выбраном направлении проход — совершаем шаг
       if (
         nextY >= 0 && nextY < rows && nextX >= 0 && nextX < cols &&
         grid[nextY][nextX] === 0
@@ -291,10 +342,9 @@
       }
     }
 
-    // События касания
     function startDrag(e) {
       isDragging = true;
-      unlockAudio(); // Разблокируем звук первым прикосновением
+      unlockAudio();
       handleMove(e);
     }
 
@@ -321,13 +371,19 @@
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
 
-          // Запуск музыки
+          // Воспроизведение звука
           audio.currentTime = 0;
-          audio.play().catch(err => console.log("Ошибка воспроизведения:", err));
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(err => {
+              console.log("Ошибка воспроизведения:", err);
+            });
+          }
         }, 150);
       }
     }
 
+    setMode('easy');
     requestAnimationFrame(animate);
   </script>
 </body>
