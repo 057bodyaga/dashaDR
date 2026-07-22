@@ -107,18 +107,18 @@
       object-fit: fill;
     }
 
-    /* ЭКРАН ПОЗДРАВЛЕНИЯ */
+    /* ОСНОВНОЙ БЛОК ПОЗДРАВЛЕНИЯ */
     #greeting-screen {
       display: none;
       max-width: 500px;
       width: 90%;
-      background: rgba(255, 255, 255, 0.95);
+      background: #ffffff; /* Без прозрачности */
       padding: 25px;
       border-radius: 20px;
       border: 1.5px solid rgba(0, 0, 0, 0.08);
       box-shadow: 0 15px 35px rgba(0,0,0,0.15);
       position: relative;
-      z-index: 10; /* Держим поверх вылетающих цветочков */
+      z-index: 10;
     }
 
     .photo {
@@ -131,19 +131,31 @@
       object-fit: cover;
     }
 
-    /* ВЫДЕЛЕННЫЙ БЛОК С ТЕКСТОМ ПОЗДРАВЛЕНИЯ */
+    /* БЛОК С ТЕКСТОМ И БЫСТРОЙ RGB ВСТАВКОЙ */
     .message {
       font-size: 1.05rem;
       line-height: 1.6;
       color: #2d3436;
       white-space: pre-line;
       margin: 15px 0;
-      padding: 16px;
-      background: rgba(108, 92, 231, 0.06); /* Приятный акцентный подтон */
-      border-left: 4px solid #6c5ce7;       /* Стильная плашка слева */
+      padding: 18px 16px 18px 20px; /* Выровненные отступы сверху и снизу */
+      background: rgba(108, 92, 231, 0.06);
+      border-left: 6px solid #ff0000; /* Исходный цвет для перелива */
       border-radius: 12px;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
       text-align: left;
+      animation: rgbBorder 1.2s linear infinite; /* Быстрая быстрая смена RGB */
+    }
+
+    /* АНИМАЦИЯ RGB ДЛЯ ПОЛОСКИ */
+    @keyframes rgbBorder {
+      0%   { border-left-color: #ff0000; }
+      17%  { border-left-color: #ff7f00; }
+      33%  { border-left-color: #ffff00; }
+      50%  { border-left-color: #00ff00; }
+      67%  { border-left-color: #00ffff; }
+      83%  { border-left-color: #0000ff; }
+      100% { border-left-color: #8b00ff; }
     }
 
     .music-btn {
@@ -174,23 +186,23 @@
       display: none;
     }
 
-    /* СТИЛИ АНИМАЦИИ ВЫЛЕТАЮЩИХ ЦВЕТОВ */
+    /* СТИЛИ БЕСКОНЕЧНЫХ ВЫЛЕТАЮЩИХ ЦВЕТОВ */
     .flower {
-      position: absolute;
+      position: fixed;
       pointer-events: none;
-      z-index: 1; /* Прячутся за основным блоком */
+      z-index: 1; /* Под основным блоком, но вылетают из-за его краев */
       user-select: none;
-      animation: flyAndFade 3.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      animation: flyAndFade 3s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
     }
 
     @keyframes flyAndFade {
       0% {
         opacity: 1;
-        transform: translate(0, 0) scale(0.5) rotate(0deg);
+        transform: translate(0, 0) scale(0.6) rotate(0deg);
       }
       100% {
         opacity: 0;
-        transform: translate(var(--tx), var(--ty)) scale(1.4) rotate(var(--rot));
+        transform: translate(var(--tx), var(--ty)) scale(1.3) rotate(var(--rot));
       }
     }
   </style>
@@ -202,7 +214,7 @@
     <h1>Пройдешь - получишь поздравление! 🎁</h1>
 
     <div class="mode-buttons">
-      <button class="btn active" id="btn-hard" onclick="setMode('hard')">🧩 Обычный (25x35)</button>
+      <button class="btn active" id="btn-hard" onclick="setMode('hard')">🧩 Обычный (10x15)</button>
       <button class="btn" id="btn-easy" onclick="setMode('easy')">⚡ Легкий (1x2)</button>
     </div>
 
@@ -225,10 +237,8 @@
     <img src="photo.png" alt="Поздравление" class="photo">
     
     <!-- Выделенный блок поздравления -->
-    <div class="message">
- Желаю тебе всегда оставаться такой же красивой, счастливой и немного припизднутой.
-Пусть деньги сами липнут к тебе, мечты исполняются без очереди, а проблемы боятся даже подходить. Люблю тебя! 💞💋
-    </div>
+    <div class="message">Желаю тебе всегда оставаться такой же красивой, счастливой и немного припизднутой.
+Пусть деньги сами липнут к тебе, мечты исполняются без очереди, а проблемы боятся даже подходить. Люблю тебя! 💞💋</div>
 
     <button class="music-btn" id="playBtn" onclick="toggleAudio()">⏸ Пауза 🎵</button>
     <div id="audio-status">Ошибка воспроизведения файла!</div>
@@ -250,8 +260,9 @@
     finishImg.src = 'finish.png';
     finishImg.onload = () => { isFinishImgLoaded = true; };
 
-    let cols = 25;
-    let rows = 35;
+    // Установлен размер лабиринта 10x15
+    let cols = 10;
+    let rows = 15;
     let cellSize = canvas.width / cols;
     let grid = [];
     let gridPos = { x: 1, y: 0 };
@@ -268,8 +279,8 @@
         document.getElementById('btn-easy').classList.add('active');
         document.getElementById('btn-hard').classList.remove('active');
       } else {
-        cols = 25;
-        rows = 35;
+        cols = 10;
+        rows = 15;
         document.getElementById('btn-hard').classList.add('active');
         document.getElementById('btn-easy').classList.remove('active');
       }
@@ -437,7 +448,7 @@
       e.preventDefault();
     }, { passive: false });
 
-    // СКРИМЕР, ПЕРЕХОД И ЗАПУСК ЦВЕТОЧНОГО САЛЮТА
+    // СКРИМЕР, ПЕРЕХОД И ЗАПУСК БЕСКОНЕЧНЫХ ЦВЕТОЧКОВ
     function checkWin() {
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
@@ -448,12 +459,11 @@
         screamerScreen.style.display = 'flex';
         screamerSound.currentTime = 0; 
         
-        // Попытка программного буста громкости
         try {
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           const source = audioCtx.createMediaElementSource(screamerSound);
           const gainNode = audioCtx.createGain();
-          gainNode.gain.value = 2.5; // В 2.5 раза громче
+          gainNode.gain.value = 2.5;
           source.connect(gainNode);
           gainNode.connect(audioCtx.destination);
         } catch(e){}
@@ -467,47 +477,64 @@
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
 
-          // Запуск цветочков из-под блока
-          spawnFlowerExplosion();
+          // Запуск бесконечного генерирования цветочков по бокам
+          startInfiniteFlowers();
 
           playMusic();
         }, 1000); 
       }
     }
 
-    // ФУНКЦИЯ ГЕНЕРАЦИИ ВЫЛЕТАЮЩИХ ЦВЕТКОВ
-    function spawnFlowerExplosion() {
+    // БЕСКОНЕЧНЫЙ ГЕНЕРАТОР ЦВЕТОЧКОВ ПО БОКАМ
+    function startInfiniteFlowers() {
+      setInterval(() => {
+        spawnSideFlower();
+      }, 120); // Регулярный спавн каждые 120 мс
+    }
+
+    function spawnSideFlower() {
+      const greetingScreen = document.getElementById('greeting-screen');
+      const rect = greetingScreen.getBoundingClientRect();
       const flowers = ['🌸', '🌺', '🌻', '🌹', '🌷', '🌼', '✨', '💖'];
-      const count = 40; // Количество цветочков
 
-      for (let i = 0; i < count; i++) {
-        setTimeout(() => {
-          const flower = document.createElement('div');
-          flower.className = 'flower';
-          flower.innerText = flowers[Math.floor(Math.random() * flowers.length)];
+      const flower = document.createElement('div');
+      flower.className = 'flower';
+      flower.innerText = flowers[Math.floor(Math.random() * flowers.length)];
 
-          // Точка старта — из центра экрана (из-под открытки)
-          flower.style.left = '50vw';
-          flower.style.top = '50vh';
-          flower.style.fontSize = (Math.random() * 20 + 24) + 'px';
+      // Выбор грани (0 = Левый край, 1 = Правый край, 2 = Нижний край)
+      const side = Math.floor(Math.random() * 3);
+      let startX, startY;
+      let tx, ty;
 
-          // Траектория вылета (разлёт во все стороны)
-          const angle = Math.random() * Math.PI * 2;
-          const distance = Math.random() * 250 + 150; // Дальность разлёта
-          const tx = Math.cos(angle) * distance + 'px';
-          const ty = (Math.sin(angle) * distance - 100) + 'px'; // Чуть больше тянем вверх
-          const rot = (Math.random() * 360 - 180) + 'deg';
-
-          flower.style.setProperty('--tx', tx);
-          flower.style.setProperty('--ty', ty);
-          flower.style.setProperty('--rot', rot);
-
-          document.body.appendChild(flower);
-
-          // Удаляем элемента из DOM после завершения анимации
-          setTimeout(() => flower.remove(), 3500);
-        }, i * 40); // Легкий каскадный вылет
+      if (side === 0) { // Слева от блока
+        startX = rect.left + 10;
+        startY = rect.top + Math.random() * rect.height;
+        tx = -(Math.random() * 150 + 80) + 'px';
+        ty = -(Math.random() * 180 + 50) + 'px';
+      } else if (side === 1) { // Справа от блока
+        startX = rect.right - 10;
+        startY = rect.top + Math.random() * rect.height;
+        tx = (Math.random() * 150 + 80) + 'px';
+        ty = -(Math.random() * 180 + 50) + 'px';
+      } else { // Снизу блока
+        startX = rect.left + Math.random() * rect.width;
+        startY = rect.bottom - 10;
+        tx = (Math.random() * 160 - 80) + 'px';
+        ty = (Math.random() * 150 + 80) + 'px';
       }
+
+      flower.style.left = startX + 'px';
+      flower.style.top = startY + 'px';
+      flower.style.fontSize = (Math.random() * 18 + 22) + 'px';
+
+      const rot = (Math.random() * 360 - 180) + 'deg';
+      flower.style.setProperty('--tx', tx);
+      flower.style.setProperty('--ty', ty);
+      flower.style.setProperty('--rot', rot);
+
+      document.body.appendChild(flower);
+
+      setTimeout(() => flower.remove(), 3000);
     }
 
     function playMusic() {
