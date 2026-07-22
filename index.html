@@ -19,7 +19,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 10px;
       text-align: center;
       color: #333;
     }
@@ -29,11 +29,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 15px;
+      gap: 10px;
+      width: 100%;
     }
 
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.3rem;
       color: #4a4a4a;
     }
 
@@ -42,19 +43,19 @@
       background-color: #fff;
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-      padding: 10px;
-      touch-action: none; /* Запрет скролла пальцем на телефоне во время игры */
+      padding: 8px;
+      touch-action: none; /* Отключаем скролл экрана при игре */
     }
 
     canvas {
       display: block;
       border-radius: 8px;
-      max-width: 90vw; /* Чтобы холст нормально вписывался в экраны смартфонов */
-      max-height: 90vw;
+      max-width: 92vw;
+      max-height: 75vh; /* Оптимизировано под вертикальные экраны */
     }
 
     .hint {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #666;
     }
 
@@ -62,11 +63,12 @@
     #greeting-screen {
       display: none;
       max-width: 500px;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 30px;
+      width: 90%;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 25px;
       border-radius: 20px;
       box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-      animation: fadeIn 1.5s ease-in-out forwards;
+      animation: fadeIn 1.2s ease-in-out forwards;
     }
 
     @keyframes fadeIn {
@@ -80,7 +82,7 @@
       height: auto;
       border-radius: 15px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-      margin: 20px 0;
+      margin: 15px 0;
       object-fit: cover;
     }
 
@@ -91,8 +93,8 @@
     }
 
     .message {
-      font-size: 1.1rem;
-      line-height: 1.6;
+      font-size: 1.05rem;
+      line-height: 1.5;
       color: #444;
       white-space: pre-line;
       margin-bottom: 10px;
@@ -105,26 +107,26 @@
   <div id="maze-screen">
     <h1>Пройди лабиринт, чтобы открыть подарок! 🎁</h1>
     <div id="maze-container">
-      <canvas id="mazeCanvas" width="420" height="420"></canvas>
+      <canvas id="mazeCanvas" width="375" height="525"></canvas>
     </div>
-    <p class="hint">Управляй пальцем или мышкой — просто тяни к финишу ✨</p>
+    <p class="hint">Веди пальцем или мышкой по лабиринту ✨</p>
   </div>
 
   <!-- 2. ЭКРАН ПОЗДРАВЛЕНИЯ -->
   <div id="greeting-screen">
     <h1>🎉 С Днём Рождения! 🎉</h1>
     
-    <!-- Твоя фотография -->
-    <img src="photo.jpg" alt="Поздравление" class="photo">
+    <!-- Главное фото (photo.png) -->
+    <img src="photo.png" alt="Поздравление" class="photo">
     
-    <!-- Твой текст поздравления -->
+    <!-- Текст поздравления -->
     <div class="message">
       Пусть каждый день приносит радость, вдохновение и исполнение всех желаний!
       Спасибо, что ты есть ❤️
     </div>
 
-    <!-- Твоя песня -->
-    <audio id="bgSong" controls autoplay>
+    <!-- Твоя песня (song.mp3) -->
+    <audio id="bgSong" controls preload="auto">
       <source src="song.mp3" type="audio/mpeg">
       Ваш браузер не поддерживает аудио.
     </audio>
@@ -134,53 +136,72 @@
     const canvas = document.getElementById('mazeCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Загрузка собственной картинки персонажа (hero.png)
+    // Картинка персонажа (hero.png)
     const playerImg = new Image();
     let isPlayerImgLoaded = false;
     playerImg.src = 'hero.png';
-    playerImg.onload = () => {
-      isPlayerImgLoaded = true;
-    };
+    playerImg.onload = () => { isPlayerImgLoaded = true; };
 
-    // Сложный лабиринт 15x15 (1 = стена, 0 = проход)
-    const grid = [
-      [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
-      [1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1],
-      [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-      [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0],
-      [0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0],
-      [0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0],
-      [0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1],
-      [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
-      [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
-      [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
-    ];
-
-    const rows = 15;
-    const cols = 15;
+    // Размеры сетки: 25 колонок (X), 35 строк (Y) — вертикальный формат
+    const cols = 25;
+    const rows = 35;
     const cellSize = canvas.width / cols;
 
-    // Логическая позиция (в клетках)
-    let gridPos = { x: 0, y: 0 };
-    // Анимированная позиция для высокого FPS (в пикселях)
-    let renderPos = { x: cellSize / 2, y: cellSize / 2 };
+    // Генерация массива лабиринта 25x35
+    // 1 = стена, 0 = проход
+    const grid = [];
+    for (let r = 0; r < rows; r++) {
+      grid[r] = [];
+      for (let c = 0; c < cols; c++) {
+        // Делаем внешние стены и паттерн сложного лабиринта
+        if (r === 0 || c === 0 || r === rows - 1 || c === cols - 1) {
+          grid[r][c] = (r === 0 && c === 0) || (r === rows - 1 && c === cols - 1) ? 0 : 1;
+        } else if (r % 2 === 0 && c % 2 === 0) {
+          grid[r][c] = 1;
+        } else {
+          // Случайные перегородки для сложности
+          grid[r][c] = (Math.sin(r * 3 + c * 5) > 0.25) ? 1 : 0;
+        }
+      }
+    }
 
-    const goal = { x: 14, y: 14 };
+    // Гарантируем свободный старт и финиш
+    grid[0][0] = 0; grid[0][1] = 0; grid[1][0] = 0;
+    grid[rows-1][cols-1] = 0; grid[rows-1][cols-2] = 0; grid[rows-2][cols-1] = 0;
+
+    let gridPos = { x: 0, y: 0 };
+    // Позиция для отрисовки
+    let renderPos = { x: cellSize / 2, y: cellSize / 2 };
+    // Скорость для скольжения
+    let velocity = { x: 0, y: 0 };
+
+    const goal = { x: cols - 1, y: rows - 1 };
     let isDragging = false;
     let gameWon = false;
 
-    // Основной цикл анимации для высокой плавности (60+ FPS)
+    // Предварительная подготовка аудио для разблокировки автозапуска
+    const audio = document.getElementById('bgSong');
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('mousedown', unlockAudio, { once: true });
+
+    function unlockAudio() {
+      audio.load();
+    }
+
+    // Анимация движения с физикой скольжения (Ice/Slippery Physics)
     function animate() {
       const targetX = gridPos.x * cellSize + cellSize / 2;
       const targetY = gridPos.y * cellSize + cellSize / 2;
 
-      renderPos.x += (targetX - renderPos.x) * 0.25;
-      renderPos.y += (targetY - renderPos.y) * 0.25;
+      // Эффект скольжения через ускорение и трение
+      const accel = 0.12; // Плавность разгона
+      const friction = 0.82; // Скольжение
+
+      velocity.x = (velocity.x + (targetX - renderPos.x) * accel) * friction;
+      velocity.y = (velocity.y + (targetY - renderPos.y) * accel) * friction;
+
+      renderPos.x += velocity.x;
+      renderPos.y += velocity.y;
 
       draw();
 
@@ -189,32 +210,31 @@
       }
     }
 
-    // Отрисовка кадра
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Рисуем стены
+      // Стены
+      ctx.fillStyle = '#6c5ce7';
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (grid[r][c] === 1) {
-            ctx.fillStyle = '#6c5ce7';
             ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
           }
         }
       }
 
-      // Рисуем финиш (подарок)
+      // Финиш
       ctx.fillStyle = '#ff7675';
       ctx.beginPath();
       ctx.arc(
         goal.x * cellSize + cellSize / 2,
         goal.y * cellSize + cellSize / 2,
-        cellSize / 3, 0, Math.PI * 2
+        cellSize / 2.5, 0, Math.PI * 2
       );
       ctx.fill();
 
-      // Рисуем персонажа (картинка hero.png, либо зеленый кружок по умолчанию)
-      const playerSize = cellSize * 0.85;
+      // Персонаж (hero.png или кружок)
+      const playerSize = cellSize * 1.1;
       if (isPlayerImgLoaded) {
         ctx.drawImage(
           playerImg,
@@ -226,12 +246,11 @@
       } else {
         ctx.fillStyle = '#00b894';
         ctx.beginPath();
-        ctx.arc(renderPos.x, renderPos.y, cellSize * 0.35, 0, Math.PI * 2);
+        ctx.arc(renderPos.x, renderPos.y, cellSize * 0.4, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    // Обработка движения
     function handleMove(e) {
       if (!isDragging || gameWon) return;
 
@@ -239,8 +258,8 @@
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-      const touchX = clientX - rect.left;
-      const touchY = clientY - rect.top;
+      const touchX = (clientX - rect.left) * (canvas.width / rect.width);
+      const touchY = (clientY - rect.top) * (canvas.height / rect.height);
 
       const targetC = Math.floor(touchX / cellSize);
       const targetR = Math.floor(touchY / cellSize);
@@ -255,7 +274,6 @@
       }
     }
 
-    // События управления
     canvas.addEventListener('mousedown', () => isDragging = true);
     canvas.addEventListener('mouseup', () => isDragging = false);
     canvas.addEventListener('mousemove', handleMove);
@@ -264,32 +282,34 @@
       isDragging = true;
       handleMove(e);
       e.preventDefault();
-    });
+    }, { passive: false });
+    
     canvas.addEventListener('touchend', () => isDragging = false);
     canvas.addEventListener('touchmove', (e) => {
       handleMove(e);
       e.preventDefault();
-    });
+    }, { passive: false });
 
-    // Проверка победы
     function checkWin() {
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
+
+        // Плавный переход и запуск музыки
         setTimeout(() => {
           document.getElementById('maze-screen').style.display = 'none';
-          const greetingScreen = document.getElementById('greeting-screen');
-          greetingScreen.style.display = 'block';
+          document.getElementById('greeting-screen').style.display = 'block';
 
-          // Попытка запустить аудио
-          const audio = document.getElementById('bgSong');
-          audio.play().catch(() => {
-            console.log("Автовоспроизведение заблокировано браузером");
-          });
-        }, 300);
+          // Принудительный старт музыки
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              console.log("Автозапуск заблокирован, нужен клик по кнопке play", error);
+            });
+          }
+        }, 200);
       }
     }
 
-    // Запуск цикла анимации
     requestAnimationFrame(animate);
   </script>
 </body>
