@@ -30,7 +30,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       width: 100%;
       z-index: 10;
     }
@@ -76,7 +76,7 @@
       display: block;
       border-radius: 8px;
       max-width: 90vw;
-      max-height: 70vh;
+      max-height: 68vh;
     }
 
     .hint {
@@ -212,12 +212,12 @@
     <h1>Пройдешь - получишь поздравление! 🎁</h1>
 
     <div class="mode-buttons">
-      <button class="btn active" id="btn-hard" onclick="setMode('hard')">🧩 Обычный (10x15)</button>
+      <button class="btn active" id="btn-hard" onclick="setMode('hard')">🧩 Обычный (9x13)</button>
       <button class="btn" id="btn-easy" onclick="setMode('easy')">⚡ Легкий (1x2)</button>
     </div>
 
     <div id="maze-container">
-      <canvas id="mazeCanvas" width="375" height="525"></canvas>
+      <canvas id="mazeCanvas" width="360" height="520"></canvas>
     </div>
     <p class="hint">Управление пальчиком (чистым) ✨</p>
   </div>
@@ -257,9 +257,11 @@
     finishImg.src = 'finish.png';
     finishImg.onload = () => { isFinishImgLoaded = true; };
 
-    let cols = 10;
-    let rows = 15;
-    let cellSize = canvas.width / cols;
+    // Нечетная правильная сетка для соединения стенок
+    let cols = 9;
+    let rows = 13;
+    let cellW = canvas.width / cols;
+    let cellH = canvas.height / rows;
     let grid = [];
     let gridPos = { x: 1, y: 0 };
     let renderPos = { x: 0, y: 0 };
@@ -275,8 +277,8 @@
         document.getElementById('btn-easy').classList.add('active');
         document.getElementById('btn-hard').classList.remove('active');
       } else {
-        cols = 10;
-        rows = 15;
+        cols = 9;
+        rows = 13;
         document.getElementById('btn-hard').classList.add('active');
         document.getElementById('btn-easy').classList.remove('active');
       }
@@ -284,7 +286,8 @@
     }
 
     function initGame() {
-      cellSize = canvas.width / cols;
+      cellW = canvas.width / cols;
+      cellH = canvas.height / rows;
       grid = Array.from({ length: rows }, () => Array(cols).fill(0));
 
       if (cols > 1) {
@@ -294,8 +297,8 @@
           }
         }
         generateMaze(1, 1);
-        grid[0][1] = 0;
-        grid[rows - 1][cols - 2] = 0;
+        grid[0][1] = 0; // Старт
+        grid[rows - 1][cols - 2] = 0; // Финиш
         gridPos = { x: 1, y: 0 };
         goal = { x: cols - 2, y: rows - 1 };
       } else {
@@ -303,8 +306,8 @@
         goal = { x: 0, y: 1 };
       }
 
-      renderPos.x = gridPos.x * cellSize + cellSize / 2;
-      renderPos.y = gridPos.y * cellSize + cellSize / 2;
+      renderPos.x = gridPos.x * cellW + cellW / 2;
+      renderPos.y = gridPos.y * cellH + cellH / 2;
 
       gameWon = false;
     }
@@ -324,10 +327,9 @@
     }
 
     function animate() {
-      const targetX = gridPos.x * cellSize + cellSize / 2;
-      const targetY = gridPos.y * cellSize + cellSize / 2;
+      const targetX = gridPos.x * cellW + cellW / 2;
+      const targetY = gridPos.y * cellH + cellH / 2;
 
-      // Мягкая интерполяция без тряски
       renderPos.x += (targetX - renderPos.x) * 0.35;
       renderPos.y += (targetY - renderPos.y) * 0.35;
 
@@ -341,28 +343,26 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Рисуем тонкие изящные стенки
+      // ОТРИСОВКА СПЛОШНЫХ СОЕДИНЕННЫХ СТЕН
       ctx.fillStyle = '#6c5ce7';
-      const wallThickness = cellSize * 0.25; 
-      const wallOffset = (cellSize - wallThickness) / 2;
-
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (grid[r][c] === 1) {
+            // Закрашиваем блоки внахлест +1px чтобы убрать микрощели
             ctx.fillRect(
-              c * cellSize + wallOffset, 
-              r * cellSize + wallOffset, 
-              wallThickness, 
-              wallThickness
+              c * cellW - 0.5, 
+              r * cellH - 0.5, 
+              cellW + 1, 
+              cellH + 1
             );
           }
         }
       }
 
-      // ФИНИШ
-      const goalX = goal.x * cellSize + cellSize / 2;
-      const goalY = goal.y * cellSize + cellSize / 2;
-      const finishSize = cellSize * 1.1;
+      // ОРИГИНАЛЬНЫЙ ФИНИШ
+      const goalX = goal.x * cellW + cellW / 2;
+      const goalY = goal.y * cellH + cellH / 2;
+      const finishSize = Math.min(cellW, cellH) * 0.95;
 
       if (isFinishImgLoaded) {
         ctx.drawImage(
@@ -373,20 +373,19 @@
           finishSize
         );
       } else {
-        // Стандартная иконка финиша
         ctx.fillStyle = '#ff7675';
         ctx.beginPath();
-        ctx.arc(goalX, goalY, cellSize * 0.45, 0, Math.PI * 2);
+        ctx.arc(goalX, goalY, Math.min(cellW, cellH) * 0.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold ' + (cellSize * 0.5) + 'px sans-serif';
+        ctx.font = 'bold ' + (Math.min(cellW, cellH) * 0.5) + 'px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('🏁', goalX, goalY);
       }
 
-      // ИГРОК (крупнее стенок)
-      const playerSize = cellSize * 1.25;
+      // ИГРОК
+      const playerSize = Math.min(cellW, cellH) * 0.95;
       if (isPlayerImgLoaded) {
         ctx.drawImage(
           playerImg,
@@ -398,7 +397,7 @@
       } else {
         ctx.fillStyle = '#00b894';
         ctx.beginPath();
-        ctx.arc(renderPos.x, renderPos.y, cellSize * 0.45, 0, Math.PI * 2);
+        ctx.arc(renderPos.x, renderPos.y, Math.min(cellW, cellH) * 0.4, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -413,14 +412,13 @@
       const touchX = (clientX - rect.left) * (canvas.width / rect.width);
       const touchY = (clientY - rect.top) * (canvas.height / rect.height);
 
-      const currentPX = gridPos.x * cellSize + cellSize / 2;
-      const currentPY = gridPos.y * cellSize + cellSize / 2;
+      const currentPX = gridPos.x * cellW + cellW / 2;
+      const currentPY = gridPos.y * cellH + cellH / 2;
 
       const dx = touchX - currentPX;
       const dy = touchY - currentPY;
 
-      // Увеличенный порог отклика предотвращает случайную микро-тряску
-      const threshold = cellSize * 0.35; 
+      const threshold = Math.min(cellW, cellH) * 0.3;
 
       let nextX = gridPos.x;
       let nextY = gridPos.y;
@@ -492,7 +490,6 @@
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
 
-          // Запуск УЛЬТРА-потока цветочков
           startMassiveFlowers();
 
           playMusic();
@@ -500,11 +497,9 @@
       }
     }
 
-    // МАССИВНЫЙ БЕСКОНЕЧНЫЙ ВЫЛЕТ ЦВЕТКОВ
+    // МАССИВНЫЙ ВЫЛЕТ ЦВЕТОЧКОВ
     function startMassiveFlowers() {
-      // Очень быстрый таймер спавна (25мс)
       setInterval(() => {
-        // За один шаг спавним сразу 2-3 цветка с разных сторон
         spawnSideFlower();
         spawnSideFlower();
       }, 25);
@@ -519,7 +514,7 @@
       flower.className = 'flower';
       flower.innerText = flowers[Math.floor(Math.random() * flowers.length)];
 
-      const side = Math.floor(Math.random() * 4); // Со всех 4-х сторон
+      const side = Math.floor(Math.random() * 4);
       let startX, startY;
       let tx, ty;
 
