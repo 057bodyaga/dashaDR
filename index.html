@@ -23,6 +23,7 @@
       text-align: center;
       color: #333;
       overflow: hidden;
+      position: relative;
     }
 
     #maze-screen {
@@ -31,6 +32,7 @@
       align-items: center;
       gap: 12px;
       width: 100%;
+      z-index: 10;
     }
 
     h1 {
@@ -102,10 +104,10 @@
     #screamer-screen img {
       width: 100%;
       height: 100%;
-      object-fit: fill; /* Растягивает во весь экран без обрезки */
+      object-fit: fill;
     }
 
-    /* ЭКРАН ПОЗДРАВЛЕНИЯ С ЛЁГКОЙ РАМКОЙ */
+    /* ЭКРАН ПОЗДРАВЛЕНИЯ */
     #greeting-screen {
       display: none;
       max-width: 500px;
@@ -113,8 +115,10 @@
       background: rgba(255, 255, 255, 0.95);
       padding: 25px;
       border-radius: 20px;
-      border: 1.5px solid rgba(0, 0, 0, 0.08); /* Легкая аккуратная рамка */
+      border: 1.5px solid rgba(0, 0, 0, 0.08);
       box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+      position: relative;
+      z-index: 10; /* Держим поверх вылетающих цветочков */
     }
 
     .photo {
@@ -127,6 +131,21 @@
       object-fit: cover;
     }
 
+    /* ВЫДЕЛЕННЫЙ БЛОК С ТЕКСТОМ ПОЗДРАВЛЕНИЯ */
+    .message {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: #2d3436;
+      white-space: pre-line;
+      margin: 15px 0;
+      padding: 16px;
+      background: rgba(108, 92, 231, 0.06); /* Приятный акцентный подтон */
+      border-left: 4px solid #6c5ce7;       /* Стильная плашка слева */
+      border-radius: 12px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      text-align: left;
+    }
+
     .music-btn {
       background: linear-gradient(135deg, #6c5ce7 0%, #a6c1ee 100%);
       color: white;
@@ -137,7 +156,7 @@
       border-radius: 30px;
       cursor: pointer;
       box-shadow: 0 6px 18px rgba(108, 92, 231, 0.35);
-      margin: 15px 0 5px 0;
+      margin: 10px 0 5px 0;
       display: inline-flex;
       align-items: center;
       gap: 10px;
@@ -155,12 +174,24 @@
       display: none;
     }
 
-    .message {
-      font-size: 1.05rem;
-      line-height: 1.5;
-      color: #444;
-      white-space: pre-line;
-      margin-bottom: 10px;
+    /* СТИЛИ АНИМАЦИИ ВЫЛЕТАЮЩИХ ЦВЕТОВ */
+    .flower {
+      position: absolute;
+      pointer-events: none;
+      z-index: 1; /* Прячутся за основным блоком */
+      user-select: none;
+      animation: flyAndFade 3.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    @keyframes flyAndFade {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(0.5) rotate(0deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(var(--tx), var(--ty)) scale(1.4) rotate(var(--rot));
+      }
     }
   </style>
 </head>
@@ -183,9 +214,7 @@
 
   <!-- 2. ЭКРАН СКРИМЕРА -->
   <div id="screamer-screen">
-    <!-- Картинка загрузится автоматически (jpg или png) -->
     <img id="screamerImg" src="screamer.jpg" onerror="this.onerror=null; this.src='screamer.png';" alt="Screamer">
-    <!-- Звук скримера (Сюда подставишь прямую ссылку) -->
     <audio id="screamerSound" src="screamer.mp3" preload="auto"></audio>
   </div>
 
@@ -195,16 +224,15 @@
     
     <img src="photo.png" alt="Поздравление" class="photo">
     
+    <!-- Выделенный блок поздравления -->
     <div class="message">
-     Желаю тебе всегда оставаться такой же красивой, счастливой и немного припизднутой.
-    Пусть деньги сами липнут к тебе, мечты исполняются без очереди, а проблемы боятся даже подходить. Люблю тебя! 💞💋
+ Желаю тебе всегда оставаться такой же красивой, счастливой и немного припизднутой.
+Пусть деньги сами липнут к тебе, мечты исполняются без очереди, а проблемы боятся даже подходить. Люблю тебя! 💞💋
     </div>
 
-    <!-- Кнопка управления музыкой -->
     <button class="music-btn" id="playBtn" onclick="toggleAudio()">⏸ Пауза 🎵</button>
     <div id="audio-status">Ошибка воспроизведения файла!</div>
 
-    <!-- Скрытый плеер главной песни -->
     <audio id="bgSong" src="https://litter.catbox.moe/t4iettpvd5jmj4aj.mp3" style="display: none;" preload="auto"></audio>
   </div>
 
@@ -212,13 +240,11 @@
     const canvas = document.getElementById('mazeCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Игрок
     const playerImg = new Image();
     let isPlayerImgLoaded = false;
     playerImg.src = 'hero.png';
     playerImg.onload = () => { isPlayerImgLoaded = true; };
 
-    // Финишная иконка
     const finishImg = new Image();
     let isFinishImgLoaded = false;
     finishImg.src = 'finish.png';
@@ -307,7 +333,6 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Стены
       ctx.fillStyle = '#6c5ce7';
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -317,7 +342,6 @@
         }
       }
 
-      // Финиш
       const goalX = goal.x * cellSize + cellSize / 2;
       const goalY = goal.y * cellSize + cellSize / 2;
       const finishSize = cellSize * 1.1;
@@ -337,7 +361,6 @@
         ctx.fill();
       }
 
-      // Игрок
       const playerSize = cellSize * 1.05;
       if (isPlayerImgLoaded) {
         ctx.drawImage(
@@ -414,7 +437,7 @@
       e.preventDefault();
     }, { passive: false });
 
-    // СКРИМЕР И ПЕРЕХОД
+    // СКРИМЕР, ПЕРЕХОД И ЗАПУСК ЦВЕТОЧНОГО САЛЮТА
     function checkWin() {
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
@@ -424,9 +447,19 @@
 
         screamerScreen.style.display = 'flex';
         screamerSound.currentTime = 0; 
+        
+        // Попытка программного буста громкости
+        try {
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const source = audioCtx.createMediaElementSource(screamerSound);
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = 2.5; // В 2.5 раза громче
+          source.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+        } catch(e){}
+
         screamerSound.play().catch(e => console.log(e));
 
-        // Ровно 1 секунда
         setTimeout(() => {
           screamerSound.pause();
           screamerScreen.style.display = 'none';
@@ -434,8 +467,46 @@
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
 
+          // Запуск цветочков из-под блока
+          spawnFlowerExplosion();
+
           playMusic();
         }, 1000); 
+      }
+    }
+
+    // ФУНКЦИЯ ГЕНЕРАЦИИ ВЫЛЕТАЮЩИХ ЦВЕТКОВ
+    function spawnFlowerExplosion() {
+      const flowers = ['🌸', '🌺', '🌻', '🌹', '🌷', '🌼', '✨', '💖'];
+      const count = 40; // Количество цветочков
+
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          const flower = document.createElement('div');
+          flower.className = 'flower';
+          flower.innerText = flowers[Math.floor(Math.random() * flowers.length)];
+
+          // Точка старта — из центра экрана (из-под открытки)
+          flower.style.left = '50vw';
+          flower.style.top = '50vh';
+          flower.style.fontSize = (Math.random() * 20 + 24) + 'px';
+
+          // Траектория вылета (разлёт во все стороны)
+          const angle = Math.random() * Math.PI * 2;
+          const distance = Math.random() * 250 + 150; // Дальность разлёта
+          const tx = Math.cos(angle) * distance + 'px';
+          const ty = (Math.sin(angle) * distance - 100) + 'px'; // Чуть больше тянем вверх
+          const rot = (Math.random() * 360 - 180) + 'deg';
+
+          flower.style.setProperty('--tx', tx);
+          flower.style.setProperty('--ty', ty);
+          flower.style.setProperty('--rot', rot);
+
+          document.body.appendChild(flower);
+
+          // Удаляем элемента из DOM после завершения анимации
+          setTimeout(() => flower.remove(), 3500);
+        }, i * 40); // Легкий каскадный вылет
       }
     }
 
