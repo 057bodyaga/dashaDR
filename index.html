@@ -109,7 +109,7 @@
     <div id="maze-container">
       <canvas id="mazeCanvas" width="375" height="525"></canvas>
     </div>
-    <p class="hint">Веди пальцем или мышкой по лабиринту ✨</p>
+    <p class="hint">Тяни в любую сторону — герой пойдёт за пальцем ✨</p>
   </div>
 
   <!-- 2. ЭКРАН ПОЗДРАВЛЕНИЯ -->
@@ -142,7 +142,7 @@
     playerImg.src = 'hero.png';
     playerImg.onload = () => { isPlayerImgLoaded = true; };
 
-    // Размеры сетки (нечётные для идеальной генерации стен)
+    // Размеры сетки
     const cols = 25;
     const rows = 35;
     const cellSize = canvas.width / cols;
@@ -150,63 +150,57 @@
     // Инициализация сетки (1 = стена, 0 = проход)
     const grid = Array.from({ length: rows }, () => Array(cols).fill(1));
 
-    // АЛГОРИТМ DFS: Генерация гарантированно проходимого лабиринта с 1 верным путем
+    // Идеальная генерация лабиринта
     function generateMaze(r, c) {
       grid[r][c] = 0;
-
-      // Возможные направления движения (вверх, вниз, влево, вправо) на 2 клетки
       const dirs = [
         [-2, 0], [2, 0], [0, -2], [0, 2]
-      ].sort(() => Math.random() - 0.5); // Перемешиваем направления
+      ].sort(() => Math.random() - 0.5);
 
       for (let [dr, dc] of dirs) {
         const nr = r + dr;
         const nc = c + dc;
 
         if (nr > 0 && nr < rows - 1 && nc > 0 && nc < cols - 1 && grid[nr][nc] === 1) {
-          grid[r + dr / 2][c + dc / 2] = 0; // Ломаем стену между клетками
+          grid[r + dr / 2][c + dc / 2] = 0;
           generateMaze(nr, nc);
         }
       }
     }
 
-    // Генерируем лабиринт начиная со старта
     generateMaze(1, 1);
-    grid[0][1] = 0; // Точный вход
-    grid[rows - 1][cols - 2] = 0; // Точный выход
+    grid[0][1] = 0;
+    grid[rows - 1][cols - 2] = 0;
 
     let gridPos = { x: 1, y: 0 };
-    // Позиция для отрисовки
     let renderPos = { x: 1 * cellSize + cellSize / 2, y: cellSize / 2 };
-    // Скорость для скольжения
-    let velocity = { x: 0, y: 0 };
 
     const goal = { x: cols - 2, y: rows - 1 };
     let isDragging = false;
     let gameWon = false;
 
-    // Предварительная подготовка аудио для разблокировки автозапуска
+    // Подготовка и разблокировка аудио
     const audio = document.getElementById('bgSong');
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-    document.addEventListener('mousedown', unlockAudio, { once: true });
+    let isAudioUnlocked = false;
 
     function unlockAudio() {
-      audio.load();
+      if (!isAudioUnlocked) {
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          isAudioUnlocked = true;
+        }).catch(() => {});
+      }
     }
 
-    // Анимация движения с физикой скольжения
+    // Отрисовка без скольжения (FPS плавность сохранена)
     function animate() {
       const targetX = gridPos.x * cellSize + cellSize / 2;
       const targetY = gridPos.y * cellSize + cellSize / 2;
 
-      const accel = 0.12;
-      const friction = 0.82;
-
-      velocity.x = (velocity.x + (targetX - renderPos.x) * accel) * friction;
-      velocity.y = (velocity.y + (targetY - renderPos.y) * accel) * friction;
-
-      renderPos.x += velocity.x;
-      renderPos.y += velocity.y;
+      // Быстрое доведение до центра клетки
+      renderPos.x += (targetX - renderPos.x) * 0.4;
+      renderPos.y += (targetY - renderPos.y) * 0.4;
 
       draw();
 
@@ -256,6 +250,7 @@
       }
     }
 
+    // Движение в сторону пальца/курсора даже если он за пределами пути
     function handleMove(e) {
       if (!isDragging || gameWon) return;
 
@@ -266,26 +261,49 @@
       const touchX = (clientX - rect.left) * (canvas.width / rect.width);
       const touchY = (clientY - rect.top) * (canvas.height / rect.height);
 
-      const targetC = Math.floor(touchX / cellSize);
-      const targetR = Math.floor(touchY / cellSize);
+      // Текущие координаты персонажа в пикселях
+      const currentPX = gridPos.x * cellSize + cellSize / 2;
+      const currentPY = gridPos.y * cellSize + cellSize / 2;
 
-      if (targetR >= 0 && targetR < rows && targetC >= 0 && targetC < cols) {
-        const isNeighbor = Math.abs(targetR - gridPos.y) + Math.abs(targetC - gridPos.x) <= 1;
-        if (isNeighbor && grid[targetR][targetC] === 0) {
-          gridPos.x = targetC;
-          gridPos.y = targetR;
-          checkWin();
-        }
+      const dx = touchX - currentPX;
+      const dy = touchY - currentPY;
+
+      // Проверяем, куда тянут относительно текущей клетки
+      let nextX = gridPos.x;
+      let nextY = gridPos.y;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > cellSize * 0.3) nextX++;
+        else if (dx < -cellSize * 0.3) nextX--;
+      } else {
+        if (dy > cellSize * 0.3) nextY++;
+        else if (dy < -cellSize * 0.3) nextY--;
+      }
+
+      // Если в выбраном направлении проход — совершаем шаг
+      if (
+        nextY >= 0 && nextY < rows && nextX >= 0 && nextX < cols &&
+        grid[nextY][nextX] === 0
+      ) {
+        gridPos.x = nextX;
+        gridPos.y = nextY;
+        checkWin();
       }
     }
 
-    canvas.addEventListener('mousedown', () => isDragging = true);
+    // События касания
+    function startDrag(e) {
+      isDragging = true;
+      unlockAudio(); // Разблокируем звук первым прикосновением
+      handleMove(e);
+    }
+
+    canvas.addEventListener('mousedown', startDrag);
     canvas.addEventListener('mouseup', () => isDragging = false);
     canvas.addEventListener('mousemove', handleMove);
 
     canvas.addEventListener('touchstart', (e) => {
-      isDragging = true;
-      handleMove(e);
+      startDrag(e);
       e.preventDefault();
     }, { passive: false });
     
@@ -303,13 +321,10 @@
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
 
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(error => {
-              console.log("Автозапуск заблокирован", error);
-            });
-          }
-        }, 200);
+          // Запуск музыки
+          audio.currentTime = 0;
+          audio.play().catch(err => console.log("Ошибка воспроизведения:", err));
+        }, 150);
       }
     }
 
