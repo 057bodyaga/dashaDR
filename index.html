@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>С Днём Рождения!</title>
+  <title>С Днём Рождения, SIS!</title>
   <style>
     * {
       box-sizing: border-box;
@@ -22,6 +22,7 @@
       padding: 10px;
       text-align: center;
       color: #333;
+      overflow: hidden;
     }
 
     #maze-screen {
@@ -81,6 +82,27 @@
       color: #666;
     }
 
+    /* МГНОВЕННЫЙ СКРИМЕР */
+    #screamer-screen {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #000;
+      z-index: 99999;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #screamer-screen img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* ЭКРАН ПОЗДРАВЛЕНИЯ (Без анимации для резкости) */
     #greeting-screen {
       display: none;
       max-width: 500px;
@@ -89,12 +111,6 @@
       padding: 25px;
       border-radius: 20px;
       box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-      animation: fadeIn 0.8s ease-in-out forwards;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
     }
 
     .photo {
@@ -148,7 +164,7 @@
 
   <!-- 1. ИГРОВОЙ ЭКРАН -->
   <div id="maze-screen">
-    <h1>Пройди лабиринт, чтобы открыть подарок! 🎁</h1>
+    <h1>Пройдешь - получишь поздравление! 🎁</h1>
 
     <div class="mode-buttons">
       <button class="btn active" id="btn-hard" onclick="setMode('hard')">🧩 Обычный (25x35)</button>
@@ -158,25 +174,31 @@
     <div id="maze-container">
       <canvas id="mazeCanvas" width="375" height="525"></canvas>
     </div>
-    <p class="hint">Тяни пальцем в сторону нужного прохода ✨</p>
+    <p class="hint">Управление пальчиком (чистым) ✨</p>
   </div>
 
-  <!-- 2. ЭКРАН ПОЗДРАВЛЕНИЯ -->
+  <!-- 2. ЭКРАН СКРИМЕРА -->
+  <div id="screamer-screen">
+    <img src="screamer.png" alt="Screamer">
+    <audio id="screamerSound" src="screamer.mp3" preload="auto"></audio>
+  </div>
+
+  <!-- 3. ЭКРАН ПОЗДРАВЛЕНИЯ -->
   <div id="greeting-screen">
-    <h1>🎉 С Днём Рождения! 🎉</h1>
+    <h1>🎉 С Днём Рождения, SIS! 🎉</h1>
     
     <img src="photo.png" alt="Поздравление" class="photo">
     
     <div class="message">
-      Пусть каждый день приносит радость, вдохновение и исполнение всех желаний!
-      Спасибо, что ты есть ❤️
+     Желаю тебе всегда оставаться такой же красивой, счастливой и немного припизднутой.
+    Пусть деньги сами липнут к тебе, мечты исполняются без очереди, а проблемы боятся даже подходить. Люблю тебя! 💞💋
     </div>
 
     <!-- Кнопка управления музыкой -->
     <button class="music-btn" id="playBtn" onclick="toggleAudio()">⏸ Пауза 🎵</button>
     <div id="audio-status">Ошибка воспроизведения файла!</div>
 
-    <!-- Скрытый плеер (display: none) -->
+    <!-- Скрытый плеер главной песни -->
     <audio id="bgSong" src="https://litter.catbox.moe/t4iettpvd5jmj4aj.mp3" style="display: none;" preload="auto"></audio>
   </div>
 
@@ -184,10 +206,17 @@
     const canvas = document.getElementById('mazeCanvas');
     const ctx = canvas.getContext('2d');
 
+    // Игрок
     const playerImg = new Image();
     let isPlayerImgLoaded = false;
     playerImg.src = 'hero.png';
     playerImg.onload = () => { isPlayerImgLoaded = true; };
+
+    // Финишная иконка
+    const finishImg = new Image();
+    let isFinishImgLoaded = false;
+    finishImg.src = 'finish.png';
+    finishImg.onload = () => { isFinishImgLoaded = true; };
 
     let cols = 25;
     let rows = 35;
@@ -272,6 +301,7 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Стены
       ctx.fillStyle = '#6c5ce7';
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -281,15 +311,27 @@
         }
       }
 
-      ctx.fillStyle = '#ff7675';
-      ctx.beginPath();
-      ctx.arc(
-        goal.x * cellSize + cellSize / 2,
-        goal.y * cellSize + cellSize / 2,
-        cellSize / 2.5, 0, Math.PI * 2
-      );
-      ctx.fill();
+      // Финиш
+      const goalX = goal.x * cellSize + cellSize / 2;
+      const goalY = goal.y * cellSize + cellSize / 2;
+      const finishSize = cellSize * 1.1;
 
+      if (isFinishImgLoaded) {
+        ctx.drawImage(
+          finishImg,
+          goalX - finishSize / 2,
+          goalY - finishSize / 2,
+          finishSize,
+          finishSize
+        );
+      } else {
+        ctx.fillStyle = '#ff7675';
+        ctx.beginPath();
+        ctx.arc(goalX, goalY, cellSize / 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Игрок
       const playerSize = cellSize * 1.05;
       if (isPlayerImgLoaded) {
         ctx.drawImage(
@@ -366,17 +408,32 @@
       e.preventDefault();
     }, { passive: false });
 
+    // РЕЗКИЙ СКРИМЕР И ПЕРЕХОД
     function checkWin() {
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
 
-        // Принудительный запуск музыки при победе
-        playMusic();
+        const screamerScreen = document.getElementById('screamer-screen');
+        const screamerSound = document.getElementById('screamerSound');
 
+        // Мгновенно включаем экран скримера и звук
+        screamerScreen.style.display = 'flex';
+        screamerSound.currentTime = 0; // Сброс звука на начало
+        screamerSound.play().catch(e => console.log(e));
+
+        // Ровно 1 секунда (1000 мс)
         setTimeout(() => {
+          // Выключаем скример
+          screamerSound.pause();
+          screamerScreen.style.display = 'none';
+
+          // Мгновенно переключаем экраны
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
-        }, 150);
+
+          // Запускаем праздничную музыку
+          playMusic();
+        }, 1000); 
       }
     }
 
