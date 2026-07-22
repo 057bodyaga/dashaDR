@@ -142,40 +142,46 @@
     playerImg.src = 'hero.png';
     playerImg.onload = () => { isPlayerImgLoaded = true; };
 
-    // Размеры сетки: 25 колонок (X), 35 строк (Y) — вертикальный формат
+    // Размеры сетки (нечётные для идеальной генерации стен)
     const cols = 25;
     const rows = 35;
     const cellSize = canvas.width / cols;
 
-    // Генерация массива лабиринта 25x35
-    // 1 = стена, 0 = проход
-    const grid = [];
-    for (let r = 0; r < rows; r++) {
-      grid[r] = [];
-      for (let c = 0; c < cols; c++) {
-        // Делаем внешние стены и паттерн сложного лабиринта
-        if (r === 0 || c === 0 || r === rows - 1 || c === cols - 1) {
-          grid[r][c] = (r === 0 && c === 0) || (r === rows - 1 && c === cols - 1) ? 0 : 1;
-        } else if (r % 2 === 0 && c % 2 === 0) {
-          grid[r][c] = 1;
-        } else {
-          // Случайные перегородки для сложности
-          grid[r][c] = (Math.sin(r * 3 + c * 5) > 0.25) ? 1 : 0;
+    // Инициализация сетки (1 = стена, 0 = проход)
+    const grid = Array.from({ length: rows }, () => Array(cols).fill(1));
+
+    // АЛГОРИТМ DFS: Генерация гарантированно проходимого лабиринта с 1 верным путем
+    function generateMaze(r, c) {
+      grid[r][c] = 0;
+
+      // Возможные направления движения (вверх, вниз, влево, вправо) на 2 клетки
+      const dirs = [
+        [-2, 0], [2, 0], [0, -2], [0, 2]
+      ].sort(() => Math.random() - 0.5); // Перемешиваем направления
+
+      for (let [dr, dc] of dirs) {
+        const nr = r + dr;
+        const nc = c + dc;
+
+        if (nr > 0 && nr < rows - 1 && nc > 0 && nc < cols - 1 && grid[nr][nc] === 1) {
+          grid[r + dr / 2][c + dc / 2] = 0; // Ломаем стену между клетками
+          generateMaze(nr, nc);
         }
       }
     }
 
-    // Гарантируем свободный старт и финиш
-    grid[0][0] = 0; grid[0][1] = 0; grid[1][0] = 0;
-    grid[rows-1][cols-1] = 0; grid[rows-1][cols-2] = 0; grid[rows-2][cols-1] = 0;
+    // Генерируем лабиринт начиная со старта
+    generateMaze(1, 1);
+    grid[0][1] = 0; // Точный вход
+    grid[rows - 1][cols - 2] = 0; // Точный выход
 
-    let gridPos = { x: 0, y: 0 };
+    let gridPos = { x: 1, y: 0 };
     // Позиция для отрисовки
-    let renderPos = { x: cellSize / 2, y: cellSize / 2 };
+    let renderPos = { x: 1 * cellSize + cellSize / 2, y: cellSize / 2 };
     // Скорость для скольжения
     let velocity = { x: 0, y: 0 };
 
-    const goal = { x: cols - 1, y: rows - 1 };
+    const goal = { x: cols - 2, y: rows - 1 };
     let isDragging = false;
     let gameWon = false;
 
@@ -188,14 +194,13 @@
       audio.load();
     }
 
-    // Анимация движения с физикой скольжения (Ice/Slippery Physics)
+    // Анимация движения с физикой скольжения
     function animate() {
       const targetX = gridPos.x * cellSize + cellSize / 2;
       const targetY = gridPos.y * cellSize + cellSize / 2;
 
-      // Эффект скольжения через ускорение и трение
-      const accel = 0.12; // Плавность разгона
-      const friction = 0.82; // Скольжение
+      const accel = 0.12;
+      const friction = 0.82;
 
       velocity.x = (velocity.x + (targetX - renderPos.x) * accel) * friction;
       velocity.y = (velocity.y + (targetY - renderPos.y) * accel) * friction;
@@ -233,7 +238,7 @@
       );
       ctx.fill();
 
-      // Персонаж (hero.png или кружок)
+      // Персонаж (hero.png или зелёный кружок)
       const playerSize = cellSize * 1.1;
       if (isPlayerImgLoaded) {
         ctx.drawImage(
@@ -294,16 +299,14 @@
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
 
-        // Плавный переход и запуск музыки
         setTimeout(() => {
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
 
-          // Принудительный старт музыки
           const playPromise = audio.play();
           if (playPromise !== undefined) {
             playPromise.catch(error => {
-              console.log("Автозапуск заблокирован, нужен клик по кнопке play", error);
+              console.log("Автозапуск заблокирован", error);
             });
           }
         }, 200);
