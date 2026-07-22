@@ -269,7 +269,6 @@
     let isDragging = false;
     let gameWon = false;
     
-    // Переменная для фиксации точки старта касания (убирает дергание)
     let touchStartGridPos = { x: 0, y: 0 };
 
     function setMode(mode) {
@@ -299,6 +298,7 @@
           }
         }
         generateMaze(1, 1);
+        removeRandomWalls(6); // Создает развилки и параллельные пути
         grid[0][1] = 0;
         grid[rows - 1][cols - 2] = 0;
         gridPos = { x: 1, y: 0 };
@@ -324,6 +324,26 @@
         if (nr > 0 && nr < rows - 1 && nc > 0 && nc < cols - 1 && grid[nr][nc] === 1) {
           grid[r + dr / 2][c + dc / 2] = 0;
           generateMaze(nr, nc);
+        }
+      }
+    }
+
+    // Создаем дополнительные развилки и проходы
+    function removeRandomWalls(count) {
+      let removed = 0;
+      while (removed < count) {
+        let r = Math.floor(Math.random() * (rows - 2)) + 1;
+        let c = Math.floor(Math.random() * (cols - 2)) + 1;
+
+        if (grid[r][c] === 1) {
+          // Убираем стенку, если она между двумя пустыми клетками
+          if (
+            (grid[r - 1][c] === 0 && grid[r + 1][c] === 0) ||
+            (grid[r][c - 1] === 0 && grid[r][c + 1] === 0)
+          ) {
+            grid[r][c] = 0;
+            removed++;
+          }
         }
       }
     }
@@ -403,7 +423,6 @@
       }
     }
 
-    // ЛОГИКА ДВИЖЕНИЯ БЕЗ ДЁРГАНИЯ (ГИСТЕРЕЗИС)
     function handleMove(e) {
       if (!isDragging || gameWon) return;
 
@@ -414,14 +433,12 @@
       const touchX = (clientX - rect.left) * (canvas.width / rect.width);
       const touchY = (clientY - rect.top) * (canvas.height / rect.height);
 
-      // Рассчитываем вектор движения относительно ЗАФИКСИРОВАННОЙ точки старта
       const startPX = touchStartGridPos.x * cellW + cellW / 2;
       const startPY = touchStartGridPos.y * cellH + cellH / 2;
 
       const dx = touchX - startPX;
       const dy = touchY - startPY;
 
-      // Мертвая зона (порог шага) — 55% от размера клетки
       const thresholdX = cellW * 0.55;
       const thresholdY = cellH * 0.55;
 
@@ -436,7 +453,6 @@
         else if (dy < -thresholdY) nextY--;
       }
 
-      // Проверяем возможность шага
       if (
         nextY >= 0 && nextY < rows && nextX >= 0 && nextX < cols &&
         grid[nextY][nextX] === 0
@@ -444,7 +460,6 @@
         if (gridPos.x !== nextX || gridPos.y !== nextY) {
           gridPos.x = nextX;
           gridPos.y = nextY;
-          // Фиксируем новую опорную точку, чтобы не возникло зависания
           touchStartGridPos = { x: nextX, y: nextY };
           checkWin();
         }
@@ -453,7 +468,6 @@
 
     function startDrag(e) {
       isDragging = true;
-      // Фиксируем позицию игрока в момент начала свайпа
       touchStartGridPos = { ...gridPos };
       handleMove(e);
     }
@@ -473,7 +487,7 @@
       e.preventDefault();
     }, { passive: false });
 
-    // СКРИМЕР И ТАЙМЕР НА 2.5 СЕКУНДЫ
+    // СКРИМЕР И ТАЙМЕР НА 2 СЕКУНДЫ
     function checkWin() {
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
@@ -495,7 +509,7 @@
 
         screamerSound.play().catch(e => console.log(e));
 
-        // Ровно 2.5 секунды (2500 мс)
+        // Ровно 2.0 секунды (2000 мс)
         setTimeout(() => {
           screamerSound.pause();
           screamerScreen.style.display = 'none';
@@ -506,7 +520,7 @@
           startMassiveFlowers();
 
           playMusic();
-        }, 2500); 
+        }, 2000); 
       }
     }
 
@@ -530,22 +544,22 @@
       let startX, startY;
       let tx, ty;
 
-      if (side === 0) { // Слева
+      if (side === 0) {
         startX = rect.left + 5;
         startY = rect.top + Math.random() * rect.height;
         tx = -(Math.random() * 250 + 100) + 'px';
         ty = (Math.random() * 300 - 150) + 'px';
-      } else if (side === 1) { // Справа
+      } else if (side === 1) {
         startX = rect.right - 5;
         startY = rect.top + Math.random() * rect.height;
         tx = (Math.random() * 250 + 100) + 'px';
         ty = (Math.random() * 300 - 150) + 'px';
-      } else if (side === 2) { // Снизу
+      } else if (side === 2) {
         startX = rect.left + Math.random() * rect.width;
         startY = rect.bottom - 5;
         tx = (Math.random() * 300 - 150) + 'px';
         ty = (Math.random() * 200 + 100) + 'px';
-      } else { // Сверху
+      } else {
         startX = rect.left + Math.random() * rect.width;
         startY = rect.top + 5;
         tx = (Math.random() * 300 - 150) + 'px';
