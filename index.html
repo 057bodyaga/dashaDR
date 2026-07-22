@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>С Днём Рождения, SIS!</title>
   <style>
     * {
@@ -82,16 +82,19 @@
       color: #666;
     }
 
-    /* МГНОВЕННЫЙ СКРИМЕР */
+    /* ПОЛНОЭКРАННЫЙ СКРИМЕР ДЛЯ МОБИЛЬНЫХ */
     #screamer-screen {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
+      right: 0;
+      bottom: 0;
       width: 100vw;
       height: 100vh;
+      height: 100dvh; /* Гарантия 100% высоты на мобильных */
       background-color: #000;
-      z-index: 99999;
+      z-index: 999999;
       justify-content: center;
       align-items: center;
     }
@@ -99,10 +102,10 @@
     #screamer-screen img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: cover; /* Растягивает без рамок */
     }
 
-    /* ЭКРАН ПОЗДРАВЛЕНИЯ (Без анимации для резкости) */
+    /* ЭКРАН ПОЗДРАВЛЕНИЯ */
     #greeting-screen {
       display: none;
       max-width: 500px;
@@ -177,9 +180,10 @@
     <p class="hint">Управление пальчиком (чистым) ✨</p>
   </div>
 
-  <!-- 2. ЭКРАН СКРИМЕРА -->
+  <!-- 2. ЭКРАН СКРИМЕРА (На весь мобильный экран) -->
   <div id="screamer-screen">
     <img src="screamer.png" alt="Screamer">
+    <!-- Звук скримера (Сюда вставим ссылку, когда скинешь) -->
     <audio id="screamerSound" src="screamer.mp3" preload="auto"></audio>
   </div>
 
@@ -408,7 +412,7 @@
       e.preventDefault();
     }, { passive: false });
 
-    // РЕЗКИЙ СКРИМЕР И ПЕРЕХОД
+    // РЕЗКИЙ СКРИМЕР И МГНОВЕННЫЙ ПЕРЕХОД
     function checkWin() {
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
@@ -416,9 +420,9 @@
         const screamerScreen = document.getElementById('screamer-screen');
         const screamerSound = document.getElementById('screamerSound');
 
-        // Мгновенно включаем экран скримера и звук
+        // Мгновенно врубаем скример во весь экран
         screamerScreen.style.display = 'flex';
-        screamerSound.currentTime = 0; // Сброс звука на начало
+        screamerSound.currentTime = 0; 
         screamerSound.play().catch(e => console.log(e));
 
         // Ровно 1 секунда (1000 мс)
@@ -427,11 +431,11 @@
           screamerSound.pause();
           screamerScreen.style.display = 'none';
 
-          // Мгновенно переключаем экраны
+          // Показываем открытку
           document.getElementById('maze-screen').style.display = 'none';
           document.getElementById('greeting-screen').style.display = 'block';
 
-          // Запускаем праздничную музыку
+          // Включаем праздничную музыку
           playMusic();
         }, 1000); 
       }
