@@ -180,10 +180,10 @@
 
     <!-- Кнопка включения музыки -->
     <button class="music-btn" id="playBtn" onclick="toggleAudio()">▶ Включить музыку 🎵</button>
-    <div id="audio-status">Файл song.mp3 не найден! Проверь имя файла в папке.</div>
+    <div id="audio-status">Ошибка воспроизведения файла!</div>
 
-    <!-- Аудио-плеер -->
-    <audio id="bgSong" src="./song.mp3" controls preload="auto"></audio>
+    <!-- Прямая ссылка на трек -->
+    <audio id="bgSong" src="https://litter.catbox.moe/t4iettpvd5jmj4aj.mp3" controls preload="auto"></audio>
   </div>
 
   <script>
@@ -261,12 +261,10 @@
       }
     }
 
-    // Плавное, мягкое доведение кадров (без рывков и без отскоков)
     function animate() {
       const targetX = gridPos.x * cellSize + cellSize / 2;
       const targetY = gridPos.y * cellSize + cellSize / 2;
 
-      // Коэффициент 0.25 дает идеальный баланс мягкого скольжения без "пружины"
       renderPos.x += (targetX - renderPos.x) * 0.25;
       renderPos.y += (targetY - renderPos.y) * 0.25;
 
@@ -280,7 +278,6 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Стены
       ctx.fillStyle = '#6c5ce7';
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -290,7 +287,6 @@
         }
       }
 
-      // Финиш
       ctx.fillStyle = '#ff7675';
       ctx.beginPath();
       ctx.arc(
@@ -300,7 +296,6 @@
       );
       ctx.fill();
 
-      // Персонаж
       const playerSize = cellSize * 1.05;
       if (isPlayerImgLoaded) {
         ctx.drawImage(
@@ -388,7 +383,6 @@
       }
     }
 
-    // Включение/пауза музыки
     function toggleAudio() {
       const audio = document.getElementById('bgSong');
       const btn = document.getElementById('playBtn');
@@ -408,7 +402,6 @@
       }
     }
 
-    // Инициализация
     setMode('hard');
     requestAnimationFrame(animate);
   </script>
