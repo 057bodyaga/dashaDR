@@ -40,29 +40,6 @@
       color: #4a4a4a;
     }
 
-    .mode-buttons {
-      display: flex;
-      gap: 10px;
-    }
-
-    .btn {
-      background: #ffffff;
-      border: 2px solid #6c5ce7;
-      color: #6c5ce7;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    }
-
-    .btn.active {
-      background: #6c5ce7;
-      color: #ffffff;
-    }
-
     #maze-container {
       position: relative;
       background-color: #fff;
@@ -184,7 +161,6 @@
       display: none;
     }
 
-    /* БЕСКОНЕЧНЫЕ ВЫЛЕТАЮЩИЕ ЦВЕТЫ */
     .flower {
       position: fixed;
       pointer-events: none;
@@ -211,11 +187,6 @@
   <div id="maze-screen">
     <h1>Пройдешь - получишь поздравление! 🎁</h1>
 
-    <div class="mode-buttons">
-      <button class="btn active" id="btn-hard" onclick="setMode('hard')">🧩 Обычный (9x13)</button>
-      <button class="btn" id="btn-easy" onclick="setMode('easy')">⚡ Легкий (1x2)</button>
-    </div>
-
     <div id="maze-container">
       <canvas id="mazeCanvas" width="360" height="520"></canvas>
     </div>
@@ -225,7 +196,7 @@
   <!-- 2. ЭКРАН СКРИМЕРА -->
   <div id="screamer-screen">
     <img id="screamerImg" src="screamer.jpg" onerror="this.onerror=null; this.src='screamer.png';" alt="Screamer">
-    <audio id="screamerSound" src="screamer.mp3" preload="auto"></audio>
+    <audio id="screamerSound" src="screamer.mp3" preload="auto" playsinline></audio>
   </div>
 
   <!-- 3. ЭКРАН ПОЗДРАВЛЕНИЯ -->
@@ -240,12 +211,32 @@
     <button class="music-btn" id="playBtn" onclick="toggleAudio()">⏸ Пауза 🎵</button>
     <div id="audio-status">Ошибка воспроизведения файла!</div>
 
-    <audio id="bgSong" src="https://litter.catbox.moe/t4iettpvd5jmj4aj.mp3" style="display: none;" preload="auto"></audio>
+    <audio id="bgSong" src="https://litter.catbox.moe/t4iettpvd5jmj4aj.mp3" style="display: none;" preload="auto" playsinline></audio>
   </div>
 
   <script>
     const canvas = document.getElementById('mazeCanvas');
     const ctx = canvas.getContext('2d');
+
+    const screamerSound = document.getElementById('screamerSound');
+    let isAudioUnlocked = false;
+
+    // Гарантированная разблокировка звука при первом касании экрана
+    function unlockAudio() {
+      if (isAudioUnlocked) return;
+      
+      screamerSound.play().then(() => {
+        screamerSound.pause();
+        screamerSound.currentTime = 0;
+        isAudioUnlocked = true;
+      }).catch(e => console.log("Unlock audio error:", e));
+
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('mousedown', unlockAudio);
+    }
+
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('mousedown', unlockAudio, { passive: true });
 
     const playerImg = new Image();
     let isPlayerImgLoaded = false;
@@ -257,8 +248,8 @@
     finishImg.src = 'finish.png';
     finishImg.onload = () => { isFinishImgLoaded = true; };
 
-    let cols = 9;
-    let rows = 13;
+    const cols = 9;
+    const rows = 13;
     let cellW = canvas.width / cols;
     let cellH = canvas.height / rows;
     let grid = [];
@@ -271,42 +262,22 @@
     
     let touchStartGridPos = { x: 0, y: 0 };
 
-    function setMode(mode) {
-      if (mode === 'easy') {
-        cols = 1;
-        rows = 2;
-        document.getElementById('btn-easy').classList.add('active');
-        document.getElementById('btn-hard').classList.remove('active');
-      } else {
-        cols = 9;
-        rows = 13;
-        document.getElementById('btn-hard').classList.add('active');
-        document.getElementById('btn-easy').classList.remove('active');
-      }
-      initGame();
-    }
-
     function initGame() {
       cellW = canvas.width / cols;
       cellH = canvas.height / rows;
       grid = Array.from({ length: rows }, () => Array(cols).fill(0));
 
-      if (cols > 1) {
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            grid[r][c] = 1;
-          }
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          grid[r][c] = 1;
         }
-        generateMaze(1, 1);
-        removeRandomWalls(6); // Создает развилки и параллельные пути
-        grid[0][1] = 0;
-        grid[rows - 1][cols - 2] = 0;
-        gridPos = { x: 1, y: 0 };
-        goal = { x: cols - 2, y: rows - 1 };
-      } else {
-        gridPos = { x: 0, y: 0 };
-        goal = { x: 0, y: 1 };
       }
+      generateMaze(1, 1);
+      removeRandomWalls(6);
+      grid[0][1] = 0;
+      grid[rows - 1][cols - 2] = 0;
+      gridPos = { x: 1, y: 0 };
+      goal = { x: cols - 2, y: rows - 1 };
 
       renderPos.x = gridPos.x * cellW + cellW / 2;
       renderPos.y = gridPos.y * cellH + cellH / 2;
@@ -328,7 +299,6 @@
       }
     }
 
-    // Создаем дополнительные развилки и проходы
     function removeRandomWalls(count) {
       let removed = 0;
       while (removed < count) {
@@ -336,7 +306,6 @@
         let c = Math.floor(Math.random() * (cols - 2)) + 1;
 
         if (grid[r][c] === 1) {
-          // Убираем стенку, если она между двумя пустыми клетками
           if (
             (grid[r - 1][c] === 0 && grid[r + 1][c] === 0) ||
             (grid[r][c - 1] === 0 && grid[r][c + 1] === 0)
@@ -365,7 +334,6 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Стены
       ctx.fillStyle = '#6c5ce7';
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -380,7 +348,6 @@
         }
       }
 
-      // Финиш
       const goalX = goal.x * cellW + cellW / 2;
       const goalY = goal.y * cellH + cellH / 2;
       const finishSize = Math.min(cellW, cellH) * 0.95;
@@ -405,7 +372,6 @@
         ctx.fillText('🏁', goalX, goalY);
       }
 
-      // Игрок
       const playerSize = Math.min(cellW, cellH) * 0.95;
       if (isPlayerImgLoaded) {
         ctx.drawImage(
@@ -467,6 +433,7 @@
     }
 
     function startDrag(e) {
+      unlockAudio();
       isDragging = true;
       touchStartGridPos = { ...gridPos };
       handleMove(e);
@@ -493,23 +460,13 @@
         gameWon = true;
 
         const screamerScreen = document.getElementById('screamer-screen');
-        const screamerSound = document.getElementById('screamerSound');
-
         screamerScreen.style.display = 'flex';
-        screamerSound.currentTime = 0; 
         
-        try {
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const source = audioCtx.createMediaElementSource(screamerSound);
-          const gainNode = audioCtx.createGain();
-          gainNode.gain.value = 2.5;
-          source.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-        } catch(e){}
+        screamerSound.currentTime = 0; 
+        screamerSound.play().catch(error => {
+          console.log("Ошибка воспроизведения скримера:", error);
+        });
 
-        screamerSound.play().catch(e => console.log(e));
-
-        // Ровно 2.0 секунды (2000 мс)
         setTimeout(() => {
           screamerSound.pause();
           screamerScreen.style.display = 'none';
@@ -518,7 +475,6 @@
           document.getElementById('greeting-screen').style.display = 'block';
 
           startMassiveFlowers();
-
           playMusic();
         }, 2000); 
       }
@@ -606,7 +562,7 @@
       }
     }
 
-    setMode('hard');
+    initGame();
     requestAnimationFrame(animate);
   </script>
 </body>
