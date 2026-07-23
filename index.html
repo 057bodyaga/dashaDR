@@ -218,49 +218,32 @@
     const canvas = document.getElementById('mazeCanvas');
     const ctx = canvas.getContext('2d');
 
-    const screamerElement = document.getElementById('screamerSound');
+    const screamerSound = document.getElementById('screamerSound');
+    let isAudioUnlocked = false;
 
-    // Стабильный AudioContext
-    let audioCtx = null;
-    let screamerAudioBuffer = null;
-    let currentSourceNode = null;
-
-    function getAudioContext() {
-      if (!audioCtx) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioContextClass) {
-          audioCtx = new AudioContextClass();
-        }
+    // «Прогрев» звука при самом первом касании экрана пользователем
+    function warmUpAudio() {
+      if (isAudioUnlocked) return;
+      screamerSound.volume = 1.0;
+      
+      // Запускаем и сразу же ставим на паузу — это дает браузеру право проигрывать этот аудиотег позже
+      const p = screamerSound.play();
+      if (p !== undefined) {
+        p.then(() => {
+          screamerSound.pause();
+          screamerSound.currentTime = 0;
+          isAudioUnlocked = true;
+        }).catch(e => {
+          console.log("Warmup failed:", e);
+        });
       }
-      return audioCtx;
+
+      window.removeEventListener('touchstart', warmUpAudio);
+      window.removeEventListener('mousedown', warmUpAudio);
     }
 
-    // Предзагрузка звука в память
-    fetch('screamer.mp3')
-      .then(res => res.arrayBuffer())
-      .then(data => {
-        const ctx = getAudioContext();
-        if (ctx) {
-          ctx.decodeAudioData(data, buffer => {
-            screamerAudioBuffer = buffer;
-          });
-        }
-      })
-      .catch(e => console.log("Fetch error:", e));
-
-    // Активация контекста на каждое касание (гарантия, что звук не заснёт)
-    function unlockAudio() {
-      const ctx = getAudioContext();
-      if (ctx && ctx.state === 'suspended') {
-        ctx.resume();
-      }
-      if (screamerElement) {
-        screamerElement.load(); // Подготавливаем запасной тег <audio>
-      }
-    }
-
-    window.addEventListener('touchstart', unlockAudio, { passive: true });
-    window.addEventListener('mousedown', unlockAudio, { passive: true });
+    window.addEventListener('touchstart', warmUpAudio, { passive: true });
+    window.addEventListener('mousedown', warmUpAudio, { passive: true });
 
     const playerImg = new Image();
     let isPlayerImgLoaded = false;
@@ -457,7 +440,7 @@
     }
 
     function startDrag(e) {
-      unlockAudio();
+      warmUpAudio();
       isDragging = true;
       touchStartGridPos = { ...gridPos };
       handleMove(e);
@@ -478,56 +461,24 @@
       e.preventDefault();
     }, { passive: false });
 
-    // БЕЗОТКАЗНОЕ ВОСПРОИЗВЕДЕНИЕ С КАСКАДНЫМ ФОЛЛБЕКОМ
-    function playScreamerSound() {
-      const ctx = getAudioContext();
-      
-      if (ctx && ctx.state === 'suspended') {
-        ctx.resume();
-      }
-
-      // 1. Пробуем через Web Audio API (свежий узел создается при КАЖДОМ вызове)
-      if (ctx && screamerAudioBuffer) {
-        try {
-          currentSourceNode = ctx.createBufferSource();
-          currentSourceNode.buffer = screamerAudioBuffer;
-          currentSourceNode.connect(ctx.destination);
-          currentSourceNode.start(0);
-          return;
-        } catch(e) {
-          console.log("Web Audio error, falling back to HTML5 Audio", e);
-        }
-      }
-
-      // 2. Фоллбек на стандартный HTML5 Audio тег
-      if (screamerElement) {
-        screamerElement.currentTime = 0;
-        screamerElement.play().catch(e => console.log("HTML5 Audio error:", e));
-      }
-    }
-
-    function stopScreamerSound() {
-      if (currentSourceNode) {
-        try { currentSourceNode.stop(); } catch(e){}
-        currentSourceNode = null;
-      }
-      if (screamerElement) {
-        screamerElement.pause();
-      }
-    }
-
-    // СКРИМЕР И ТАЙМЕР НА 2 СЕКУНДЫ
+    // МГНОВЕННЫЙ ЗАПУСК СКРИМЕРА И ЗВУКА В МОМЕНТ ШАГА НА ФИНИШ
     function checkWin() {
       if (gridPos.x === goal.x && gridPos.y === goal.y && !gameWon) {
         gameWon = true;
 
+        // Показываем скример
         const screamerScreen = document.getElementById('screamer-screen');
         screamerScreen.style.display = 'flex';
         
-        playScreamerSound();
+        // Включаем звук СРАЗУ (в стеке события касания экрана)
+        screamerSound.currentTime = 0;
+        screamerSound.play().catch(err => {
+          console.log("Play blocked:", err);
+        });
 
+        // Через 2 секунды прячем скример
         setTimeout(() => {
-          stopScreamerSound();
+          screamerSound.pause();
           screamerScreen.style.display = 'none';
 
           document.getElementById('maze-screen').style.display = 'none';
